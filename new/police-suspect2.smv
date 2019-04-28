@@ -5,8 +5,9 @@ MODULE main
     p : police(s);
     s : suspect(p);
 
-  SPEC AG ((p.give_order & s.refuse_order & (p.displaying_starbadge | p.traffic_authority)) -> AF s.offense)
   SPEC AG ((s.knows_info & s.gives_false_info & (p.issue_citation | p.issue_warrant)) -> AF s.misdemeanor)
+  SPEC AG ((p.give_order & s.refuse_order & (p.displaying_starbadge | p.traffic_authority)) -> AF s.offense)
+  SPEC AG ((                ) -> AF s.felony)
 
 MODULE police (suspect)
 
@@ -17,7 +18,14 @@ MODULE police (suspect)
     give_order : boolean;
     displaying_starbadge : boolean;
     traffic_authority : boolean;
+    on_duty : boolean;
+    give_signal : boolean;
+    enter_premises : boolean;
 
+
+  ASSIGN
+    init(make_arrest) := FALSE;
+    next(make_arrest) := (suspect.felony | suspect.misdemeanor)& enter_premises;
 
 MODULE suspect(police)
 
@@ -25,9 +33,15 @@ MODULE suspect(police)
     knows_info : boolean;
     gives_false_info : boolean;
     refuse_order : boolean;
+    motor_cycle : boolean;
+    fleeing : boolean;
+    trafic_voilation : boolean;
 
     false_info_crime : boolean;
     disobey_crime : boolean;
+    assault_crime : boolean;
+    assault : boolean;
+    fleeing_crime : boolean;
 
     felony : boolean;
     misdemeanor : boolean;
@@ -43,12 +57,21 @@ MODULE suspect(police)
     init(false_info_crime) := FALSE;
     next(false_info_crime) := knows_info & gives_false_info & (police.issue_citation | police.issue_warrant); 
 
+    init(assault_crime) := FALSE;
+    next(assault_crime) := assault & police.on_duty & police.displaying_starbadge;
+
+    init(fleeing_crime) := FALSE;
+    next(fleeing_crime) := motor_cycle & fleeing &police.displaying_starbadge & police.give_signal & 
+
+
+    init(felony) := FALSE;
+    next(felony) := assault_crime;
+
     init(misdemeanor) := FALSE;
     next(misdemeanor) := false_info_crime;
 
     init(offense) := FALSE;
-    next(offense) := disobey_crime;
-
+    next(offense) := disobey_crime | fleeing_crime;
 
     init(crime_level) := none;
     next(crime_level) :=
