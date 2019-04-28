@@ -1,0 +1,60 @@
+MODULE main
+
+  VAR
+    day_time : boolean;
+    p : police(s);
+    s : suspect(p);
+
+  SPEC AG ((p.give_order & s.refuse_order & (p.displaying_starbadge | p.traffic_authority)) -> AF s.offense)
+  SPEC AG ((s.knows_info & s.gives_false_info & (p.issue_citation | p.issue_warrant)) -> AF s.misdemeanor)
+
+MODULE police (suspect)
+
+  VAR
+    issue_citation : boolean;
+    issue_warrant : boolean;
+    make_arrest : boolean; 
+    give_order : boolean;
+    displaying_starbadge : boolean;
+    traffic_authority : boolean;
+
+
+MODULE suspect(police)
+
+  VAR
+    knows_info : boolean;
+    gives_false_info : boolean;
+    refuse_order : boolean;
+
+    false_info_crime : boolean;
+    disobey_crime : boolean;
+
+    felony : boolean;
+    misdemeanor : boolean;
+    offense : boolean;
+
+    crime_level : {o, m, f, none};
+
+  ASSIGN
+
+    init(disobey_crime) := FALSE;
+    next(disobey_crime) := police.give_order & refuse_order & (police.displaying_starbadge | police.traffic_authority);
+
+    init(false_info_crime) := FALSE;
+    next(false_info_crime) := knows_info & gives_false_info & (police.issue_citation | police.issue_warrant); 
+
+    init(misdemeanor) := FALSE;
+    next(misdemeanor) := false_info_crime;
+
+    init(offense) := FALSE;
+    next(offense) := disobey_crime;
+
+
+    init(crime_level) := none;
+    next(crime_level) :=
+    case
+      offense : o;
+      misdemeanor : m;
+      felony : f;
+      TRUE : none;
+    esac;

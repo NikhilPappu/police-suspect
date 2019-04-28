@@ -1,0 +1,150 @@
+MODULE main
+
+  VAR
+    day_time : boolean;
+    p : police(s);
+    s : suspect(p);
+
+  SPEC AG (s.obey_offense -> AF p.can_arrest)
+  SPEC ! AG (s.traffic_violation -> AF p.can_arrest)
+  SPEC ! AG (day_time -> AF p.can_arrest)
+  
+
+MODULE police (suspect)
+
+  VAR
+
+    gender : {male, female};
+
+    make_arrest : {none, with_warrant, without_warrant};
+
+    firearms_training: boolean;
+    psychological_screening: boolean;
+
+    can_carry_arms : boolean;
+
+    can_arrest : boolean;
+    enforcing_motor_laws : boolean;
+    displaying_badge : boolean;
+    in_duty : boolean;
+    stop_signal : boolean;
+    force : {normal, deadly};
+    can_enter_premises : boolean;
+    malice : boolean;
+    criminally_liable : boolean;
+    warrant : boolean;
+    no_warrant_permission : boolean;
+    can_examine_weapon : boolean;
+
+  ASSIGN
+
+    init(can_enter_premises) := TRUE;
+
+    init(can_examine_weapon) :=
+    case
+      suspect.concealed_weapon_license & suspect.show_concealed_weapon_license : FALSE;
+      TRUE : suspect.in_public_building;
+    esac;
+
+    init(can_carry_arms) := firearms_training & psychological_screening;
+
+    init(can_arrest) := FALSE;
+    next(can_arrest) :=
+    case
+    suspect.non_sexual_offense: TRUE;
+    suspect.firearm_offense: !(suspect.firearm_license | suspect.officer);
+    suspect.sexual_offense & suspect.gender = female: gender = female;
+    TRUE :  suspect.offense;
+    esac;
+    
+   
+    init(criminally_liable) := malice;
+    next(criminally_liable) :=
+    case
+      make_arrest = with_warrant & suspect.given_order_copy : FALSE;
+      TRUE : criminally_liable;
+    
+    esac; 
+
+    init(make_arrest) := none;
+    next(make_arrest) :=
+      case
+        suspect.animal_abuse : without_warrant;
+        can_arrest & warrant : with_warrant;
+        can_arrest & !warrant & no_warrant_permission : without_warrant;
+        TRUE : make_arrest;
+      esac;
+
+
+MODULE suspect(police)
+
+  VAR
+
+    crime_level: {new_offense, felony, misdemeanor};
+
+    gender : {male, female};
+    
+    officer : boolean;
+
+    in_public_building : boolean;
+
+    firearm_license : boolean;
+
+    sexual_offense : boolean;
+
+    animal_abuse : boolean;
+
+    given_order_copy : boolean;
+
+    offense : boolean;
+    
+    knows_officer : boolean;
+
+    false_info_offense : boolean;
+    gives_false_info : boolean;
+    knows_info : boolean;
+
+    obey_offense : boolean;
+    obey_order : boolean;
+
+    assault_offense : boolean;
+    cause_injury: boolean;
+
+    resist_offense : boolean;
+    resist_arrest: boolean;
+    physical_force : boolean;
+
+    flee_offense : boolean;
+    flee : boolean;
+
+    traffic_violation : boolean;
+
+    firearm_offense : boolean;
+
+    concealed_weapon_license : boolean;
+
+    show_concealed_weapon_license : boolean;
+
+  ASSIGN
+    init(false_info_offense) := FALSE;
+    next(false_info_offense) := knows_info & gives_false_info & police.enforcing_motor_laws;
+
+    init(obey_offense) := FALSE;
+    next(obey_offense) := !obey_order & police.displaying_badge;
+
+    init(assault_offense) := FALSE;
+    next(assault_offense) := cause_injury & knows_officer & police.in_duty;
+
+    init(resist_offense) := FALSE;
+    next(resist_offense) := (resist_arrest|physical_force) & knows_officer & police.in_duty;
+
+    init(flee_offense) := FALSE;
+    next(flee_offense) := flee & police.stop_signal;
+
+    init(offense) := FALSE;
+    next(offense) := false_info_offense | obey_offense | assault_offense | resist_offense
+                     | flee_offense | animal_abuse | sexual_offense | firearm_offense;
+
+  DEFINE
+    non_sexual_offense := false_info_offense | obey_offense | assault_offense | resist_offense | flee_offense | animal_abuse;
+  

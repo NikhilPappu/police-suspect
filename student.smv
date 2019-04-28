@@ -1,0 +1,18 @@
+MODULE main
+
+  VAR
+    sick : boolean;
+		night : boolean;
+		can_go_out : boolean;
+
+  ASSIGN
+	init(can_go_out) :=
+		case
+			night : FALSE;
+			!night : TRUE;
+			sick : TRUE;
+			!sick : {TRUE,FALSE};
+		esac;
+
+  SPEC night -> !can_go_out
+  SPEC sick -> can_go_out
